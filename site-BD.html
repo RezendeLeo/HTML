@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integração com Banco de Dados</title>
+</head>
+<body>
+    <h1><center>Listagem de Clientes</center></h1>
+    
+    <ul id="cliente-list">
+        <!-- Os clientes serão exibidos aqui -->
+    </ul>
+
+    <h2>Cadastrar Cliente</h2>
+    <form id="cliente-form">
+        <label for="nome">Nome:</label>
+        <input type="text" id="nome" name="nome" required><br>
+        
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required><br>
+        <br>
+        <input type="submit" value="Adicionar Cliente">
+    </form>
+<br><br>
+    <h2>Remover Cliente</h2>
+    <form id="cliente-remover-form">
+        <label for="id">ID do Cliente:</label>
+        <input type="number" id="id" name="id" required><br>
+        <br>
+        <input type="button" value="Remover Cliente" onclick="removerCliente()">
+    </form>
+
+    <script>
+        // Abrir ou criar o banco de dados
+        var db = openDatabase('teste.db', '1.0', 'Meu Banco de Dados', 2 * 1024 * 1024);
+
+        // Criar a tabela de clientes (se não existir)
+        db.transaction(function(tx) {
+            tx.executeSql('CREATE TABLE IF NOT EXISTS clientes (id INTEGER PRIMARY KEY, nome TEXT, email TEXT)');
+        });
+
+        // Função para carregar e exibir os clientes
+        function loadClientes() {
+            db.transaction(function(tx) {
+                tx.executeSql('SELECT * FROM clientes', [], function(tx, results) {
+                    var clienteList = document.getElementById('cliente-list');
+                    clienteList.innerHTML = ''; // Limpa a lista antes de recarregar
+
+                    var len = results.rows.length;
+                    for (var i = 0; i < len; i++) {
+                        var cliente = results.rows.item(i);
+                        var listItem = document.createElement('li');
+                        listItem.textContent = 'ID: ' + cliente.id + ', Nome: ' + cliente.nome + ', Email: ' + cliente.email;
+                        clienteList.appendChild(listItem);
+                    }
+                });
+            });
+        }
+
+        // Carregar os clientes quando a página carregar
+        window.onload = loadClientes;
+
+        // Adicionar um novo cliente
+        document.getElementById('cliente-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var nome = document.getElementById('nome').value;
+            var email = document.getElementById('email').value;
+            
+            db.transaction(function(tx) {
+                tx.executeSql('INSERT INTO clientes (nome, email) VALUES (?, ?)', [nome, email], function() {
+                    console.log('Cliente inserido com sucesso!');
+                    loadClientes(); // Recarregar a lista após a inserção
+                    document.getElementById('nome').value = '';
+                    document.getElementById('email').value = '';
+                }, function(err) {
+                    console.error('Erro ao inserir cliente:', err);
+                });
+            });
+        });
+
+        // Função para remover um cliente por ID
+        function removerCliente() {
+            var id = document.getElementById('id').value;
+            
+            db.transaction(function(tx) {
+                tx.executeSql('DELETE FROM clientes WHERE id = ?', [id], function() {
+                    console.log('Cliente removido com sucesso!');
+                    loadClientes(); // Recarregar a lista após a remoção
+                    document.getElementById('id').value = '';
+                }, function(err) {
+                    console.error('Erro ao remover cliente:', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
